@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1f4014607efa513a6c32f741921aca85",
+    "content-hash": "35126dfe5d25263596d7992fe4e730f7",
     "packages": [
         {
             "name": "pedhot-dev/nepotismfree-di",
-            "version": "1.0.0",
-            "dist": {
-                "type": "path",
-                "url": "../nepotismfree-di",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Pedhot-Dev/NepotismFree-DI.git",
                 "reference": "499aedaface2bbd670d7d98086343538749bdcb0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Pedhot-Dev/NepotismFree-DI/zipball/499aedaface2bbd670d7d98086343538749bdcb0",
+                "reference": "499aedaface2bbd670d7d98086343538749bdcb0",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.1"
@@ -20,6 +26,7 @@
             "require-dev": {
                 "phpunit/phpunit": "^10.0"
             },
+            "default-branch": true,
             "type": "library",
             "extra": {
                 "virion": {
@@ -32,11 +39,7 @@
                     "PedhotDev\\NepotismFree\\": "src/PedhotDev/NepotismFree"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "PedhotDev\\NepotismFree\\Tests\\": "tests/"
-                }
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -48,12 +51,10 @@
             ],
             "description": "A high-performance, opinionated, strict Dependency Injection Container for PHP 8.1+. No magic, no hidden wiring.",
             "support": {
-                "source": "https://github.com/Pedhot-Dev/nepotismfree-di",
-                "issues": "https://github.com/Pedhot-Dev/nepotismfree-di/issues"
+                "issues": "https://github.com/Pedhot-Dev/nepotismfree-di/issues",
+                "source": "https://github.com/Pedhot-Dev/nepotismfree-di"
             },
-            "transport-options": {
-                "relative": true
-            }
+            "time": "2026-01-18T07:46:10+00:00"
         },
         {
             "name": "psr/container",
@@ -692,34 +693,35 @@
         },
         {
             "name": "symfony/string",
-            "version": "v8.0.1",
+            "version": "v7.4.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/string.git",
-                "reference": "ba65a969ac918ce0cc3edfac6cdde847eba231dc"
+                "reference": "d50e862cb0a0e0886f73ca1f31b865efbb795003"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/string/zipball/ba65a969ac918ce0cc3edfac6cdde847eba231dc",
-                "reference": "ba65a969ac918ce0cc3edfac6cdde847eba231dc",
+                "url": "https://api.github.com/repos/symfony/string/zipball/d50e862cb0a0e0886f73ca1f31b865efbb795003",
+                "reference": "d50e862cb0a0e0886f73ca1f31b865efbb795003",
                 "shasum": ""
             },
             "require": {
-                "php": ">=8.4",
-                "symfony/polyfill-ctype": "^1.8",
-                "symfony/polyfill-intl-grapheme": "^1.33",
-                "symfony/polyfill-intl-normalizer": "^1.0",
-                "symfony/polyfill-mbstring": "^1.0"
+                "php": ">=8.2",
+                "symfony/deprecation-contracts": "^2.5|^3.0",
+                "symfony/polyfill-ctype": "~1.8",
+                "symfony/polyfill-intl-grapheme": "~1.33",
+                "symfony/polyfill-intl-normalizer": "~1.0",
+                "symfony/polyfill-mbstring": "~1.0"
             },
             "conflict": {
                 "symfony/translation-contracts": "<2.5"
             },
             "require-dev": {
-                "symfony/emoji": "^7.4|^8.0",
-                "symfony/http-client": "^7.4|^8.0",
-                "symfony/intl": "^7.4|^8.0",
+                "symfony/emoji": "^7.1|^8.0",
+                "symfony/http-client": "^6.4|^7.0|^8.0",
+                "symfony/intl": "^6.4|^7.0|^8.0",
                 "symfony/translation-contracts": "^2.5|^3.0",
-                "symfony/var-exporter": "^7.4|^8.0"
+                "symfony/var-exporter": "^6.4|^7.0|^8.0"
             },
             "type": "library",
             "autoload": {
@@ -758,7 +760,7 @@
                 "utf8"
             ],
             "support": {
-                "source": "https://github.com/symfony/string/tree/v8.0.1"
+                "source": "https://github.com/symfony/string/tree/v7.4.0"
             },
             "funding": [
                 {
@@ -778,18 +780,21 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2025-12-01T09:13:36+00:00"
+            "time": "2025-11-27T13:27:24+00:00"
         }
     ],
     "packages-dev": [],
     "aliases": [],
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "stability-flags": {},
-    "prefer-stable": false,
+    "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
     "platform-dev": {},
+    "platform-overrides": {
+        "php": "8.2"
+    },
     "plugin-api-version": "2.9.0"
 }
