@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  smoke-test:
+    name: Smoke Test (PHP ${{ matrix.php-versions }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        php-versions: ['8.2']
+
+    steps:
+    # 1. Checkout checks out the code so we can run it
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 2. Setup PHP environment
+    # We insist on 8.2 as per project requirements
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-versions }}
+        tools: composer:v2
+        coverage: none # Disable coverage for speed
+
+    # 3. Install dependencies
+    # --prefer-dist for speed
+    # --no-interaction to prevent blocking on prompts
+    - name: Install Composer Dependencies
+      run: composer install --prefer-dist --no-interaction --no-progress
+
+    # 4. CLI Boot & Smoke Test
+    # - Ensure list command runs (verifies container boot)
+    # - Ensure graph command runs on fixtures (verifies graph logic)
+    - name: Run CLI Smoke Tests
+      run: |
+        echo "Testing CLI boot..."
+        php bin/di list
+        
+        echo "Testing Graph generation..."
+        php bin/di di:graph -b tests/fixtures/bootstrap.php
