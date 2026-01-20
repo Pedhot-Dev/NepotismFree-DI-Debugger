@@ -1,0 +1,27 @@
+# Composer
+/vendor/
+composer.lock
+
+# PHP tooling caches
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.psalm/
+.phpstan/
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug / temp
+/tmp/
+.cache/
+
+# Local bootstrap overrides (if any)
+di-config.php
