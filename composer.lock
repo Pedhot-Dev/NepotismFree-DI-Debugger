@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "35126dfe5d25263596d7992fe4e730f7",
+    "content-hash": "51d12aa2cd65bd78bb963f5bab59dd1c",
     "packages": [
         {
             "name": "pedhot-dev/nepotismfree-di",
-            "version": "dev-master",
+            "version": "v1.0.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Pedhot-Dev/NepotismFree-DI.git",
-                "reference": "499aedaface2bbd670d7d98086343538749bdcb0"
+                "reference": "949dd14d0ac679e3cf6ce2501d2c4ab89440f79c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Pedhot-Dev/NepotismFree-DI/zipball/499aedaface2bbd670d7d98086343538749bdcb0",
-                "reference": "499aedaface2bbd670d7d98086343538749bdcb0",
+                "url": "https://api.github.com/repos/Pedhot-Dev/NepotismFree-DI/zipball/949dd14d0ac679e3cf6ce2501d2c4ab89440f79c",
+                "reference": "949dd14d0ac679e3cf6ce2501d2c4ab89440f79c",
                 "shasum": ""
             },
             "require": {
@@ -26,7 +26,6 @@
             "require-dev": {
                 "phpunit/phpunit": "^10.0"
             },
-            "default-branch": true,
             "type": "library",
             "extra": {
                 "virion": {
@@ -54,7 +53,7 @@
                 "issues": "https://github.com/Pedhot-Dev/nepotismfree-di/issues",
                 "source": "https://github.com/Pedhot-Dev/nepotismfree-di"
             },
-            "time": "2026-01-18T07:46:10+00:00"
+            "time": "2026-01-20T03:46:52+00:00"
         },
         {
             "name": "psr/container",

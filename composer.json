@@ -6,7 +6,7 @@
     "require": {
         "php": "^8.2",
         "symfony/console": "^7.0",
-        "pedhot-dev/nepotismfree-di": "*"
+        "pedhot-dev/nepotismfree-di": "v1.0.2"
     },
     "autoload": {
         "psr-4": {

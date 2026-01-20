@@ -26,4 +26,11 @@ $registry->setSingleton(RootService::class, true);
 $policy = new ModuleAccessPolicy([]); // Allow everything for test
 
 // Container
-return new Container($registry, $policy);
+// Container
+// For Debugger Smoke Test, we need an Introspectable container.
+// The public library might not have it yet, so we mock it.
+// And Polyfill the missing interface if needed.
+require_once __DIR__ . '/Polyfill.php';
+require_once __DIR__ . '/MockContainer.php';
+
+return new \Tests\Fixtures\MockIntrospectableContainer($registry, $policy);
