@@ -3,6 +3,15 @@
     "description": "CLI Debugger for NepotismFree-DI",
     "type": "project",
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../nepotismfree-di",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
     "require": {
         "php": "^8.2",
         "symfony/console": "^7.0",

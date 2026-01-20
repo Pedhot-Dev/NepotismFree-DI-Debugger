@@ -9,11 +9,14 @@ use PedhotDev\NepotismFree\Debugger\Model\DebuggerNode;
 
 class TextGraphFormatter implements GraphFormatterInterface
 {
-    private array $visited = [];
+    /**
+     * @var array<string, bool> Tracks nodes visited in the global scope (across all trees)
+     */
+    private array $globalVisited = [];
 
     public function format(DebuggerGraph $graph): string
     {
-        $this->visited = [];
+        $this->globalVisited = []; // Reset per format call
         $nodes = $graph->getNodes();
         
         // 1. Identify Roots (Entry Points)
@@ -34,24 +37,24 @@ class TextGraphFormatter implements GraphFormatterInterface
 
         $output = [];
         $output[] = "Runtime Dependency Graph";
+        $output[] = "";
         
         if (!empty($roots)) {
-            $output[] = "Entry point(s): " . implode(', ', array_map(fn($n) => $n->id, $roots));
-            $output[] = "";
-
             foreach ($roots as $root) {
+                // ANCHOR: Entry point visual signal
+                $output[] = sprintf("▶ ROOT: <info>%s</info>", $root->id);
                 $output = array_merge($output, $this->renderTree($root, $graph));
                 $output[] = ""; // Spacing
             }
         } else {
-            $output[] = "<comment>No explicit entry points found (all nodes are circular or required).</comment>";
+            $output[] = "<comment>No explicit entry points found.</comment>";
             $output[] = "";
         }
 
         // 2. Print any remaining nodes that weren't reached (e.g. disconnected cycles)
         $orphans = [];
         foreach ($nonRoots as $node) {
-            if (!isset($this->visited[$node->id])) {
+            if (!isset($this->globalVisited[$node->id])) {
                 $orphans[] = $node;
             }
         }
@@ -59,11 +62,10 @@ class TextGraphFormatter implements GraphFormatterInterface
         if (!empty($orphans)) {
             $output[] = "Disconnected / Cyclic Nodes:";
             foreach ($orphans as $orphan) {
-                // Determine if this is a 'local root' of a cycle
-                // We just render it as a tree root for visibility
-                if (!isset($this->visited[$orphan->id])) {
-                    $output = array_merge($output, $this->renderTree($orphan, $graph));
-                    $output[] = "";
+                if (!isset($this->globalVisited[$orphan->id])) {
+                     $output[] = sprintf("▶ ORPHAN: <comment>%s</comment>", $orphan->id);
+                     $output = array_merge($output, $this->renderTree($orphan, $graph));
+                     $output[] = "";
                 }
             }
         }
@@ -74,40 +76,51 @@ class TextGraphFormatter implements GraphFormatterInterface
     /**
      * @return string[]
      */
-    private function renderTree(DebuggerNode $node, DebuggerGraph $graph, string $prefix = '', array $path = []): array
+    private function renderTree(DebuggerNode $node, DebuggerGraph $graph, string $currentPrefix = '', string $childrenPrefix = '', array $path = []): array
     {
         $lines = [];
         $isCycle = in_array($node->id, $path, true);
-        $this->visited[$node->id] = true;
+        
+        $isShared = count($node->requiredBy) > 1;
+
+        // Mark as visited globally
+        $alreadyVisitedGlobal = isset($this->globalVisited[$node->id]);
+        $this->globalVisited[$node->id] = true;
 
         // Label Formatting
-        // Collapse redundant info: If ID matches Concrete, hide concrete
         $concreteStr = '';
         if ($node->concrete && $node->concrete !== $node->id && $node->concrete !== 'closure') {
-            $concreteStr = " <comment>({$node->concrete})</comment>";
+            $concreteStr = " <fg=gray>({$node->concrete})</>";
         }
 
-        $typeColor = match($node->type) {
-            'singleton' => 'info',
-            'prototype' => 'comment',
-            default => 'fg=white'
+        // Lifetime Symbol
+        $symbol = match($node->type) {
+            'singleton' => '<info>●</info>',
+            'prototype' => '○',
+            default => '?',
         };
 
-        $label = sprintf(
-            "[%s] <%s>(%s)</%s>%s", 
-            $node->id, 
-            $typeColor, 
-            $node->type, 
-            $typeColor, 
-            $concreteStr
-        );
+        // Shared Tag
+        $sharedTag = $isShared ? ' <fg=magenta>★ shared</>' : '';
+
+        // Cycle Tag
+        $cycleTag = $isCycle ? ' <error>(Cycle)</error>' : '';
+
+        // Construct Label
+        $label = sprintf("%s %s%s%s%s", $symbol, $node->id, $concreteStr, $sharedTag, $cycleTag);
         
+        // Print the node line using the current prefix
+        $lines[] = $currentPrefix . $label;
+
+        // If cycle, stop
         if ($isCycle) {
-            $lines[] = $prefix . $label . " <error>(Cycle)</error>";
             return $lines;
         }
 
-        $lines[] = $prefix . $label;
+        // Optimization for Shared Nodes: if visited globally, stop recursion to avoid noise
+        if ($isShared && $alreadyVisitedGlobal) {
+            return $lines;
+        }
 
         // Dependencies
         $children = $node->dependencies;
@@ -117,79 +130,65 @@ class TextGraphFormatter implements GraphFormatterInterface
             return $lines;
         }
 
-        // Add "depends on:" label logic if we want to match the user's example strictly? 
-        // User example: "  └─ depends on:" ... "    └─ ServiceA".
-        // That adds extra vertical space. Let's stick to direct tree for compactness unless requested explicitly?
-        // User said "Target output style (example, not exact)".
-        // Cleaner:
-        // [Root]
-        //   └─ ChildA
-        //   └─ ChildB
-        
-        // HOWEVER, user's example has explicit "depends on". 
-        // Let's adopt a compact tree style directly.
-        
         $path[] = $node->id;
 
         foreach ($children as $index => $childId) {
             $isLast = ($index === $count - 1);
             $connector = $isLast ? '└─ ' : '├─ ';
-            $subPrefix = $isLast ? '   ' : '│  ';
+            $childParams = $isLast ? '   ' : '│  ';
             
             $childNode = $graph->getNode($childId);
             
             if (!$childNode) {
-                $lines[] = $prefix . $connector . "<error>$childId (Missing)</error>";
+                $lines[] = $childrenPrefix . $connector . "<error>$childId (Missing)</error>";
             } else {
-                // Check if already visited in GLOBAL scope? 
-                // We want to avoid printing huge subtrees multiple times (Shared Dependencies).
-                // BUT we want to show that it exists.
-                // Strategy: If already visited and is a complex node (has kids), maybe summarize?
-                // Or just print usage?
-                
-                // If it's a Singleton and already visited, often good to stop and say "See above".
-                // If Prototype, technically it's a new instance, but graph-wise it's the same structure.
-                
-                // Let's implement: If node has dependencies AND was already visited globally, 
-                // print it but don't recurse.
-                // UNLESS it was visited in the *current* path (recursion loop handled above).
-                 
-                // Actually, let's allow it for now, but if graph is huge...
-                // The requirements say "Output must remain readable for large graphs".
-                // Printing a shared dependency tree 50 times IS unreadable.
-                
-                // Improvement: If visited globally, print node label + "..." or similar.
-                
-                // Current path check is for Cycles.
-                // Global visited check is for Conciseness.
-                
-                // But we marked "visited" at top of function.
-                // So recursive calls will see it as visited. We need to distinguish current path vs global.
-                // I used $this->visited for global.
-                
-                // Wait, if I use global visited, I might skip rendering a child if it was rendered elsewhere?
-                // Yes.
-                // Example: A->C, B->C.
-                // Render A. Renders C. C marked visited.
-                // Render B. Sees C. C visited. Should I render C?
-                // Yes, I should show B->C. But should I expand C's children?
-                // If C is expanded under A, repeating it under B is noise.
-                // So: Print C (label), but Stop recursion. adding "(*)" or similar.
-                
-                $isGloballyVisited = isset($this->visited[$childId]) && !in_array($childId, $path, true);
-                
-                if ($isGloballyVisited) {
-                     // Get child label logic quickly
-                    $cTypeColor = match($childNode->type) { 'singleton' => 'info', default => 'comment' };
-                    $cConcreteStr = ($childNode->concrete && $childNode->concrete !== $childId && $childNode->concrete !== 'closure') ? " ($childNode->concrete)" : "";
-                    
-                    $lines[] = $prefix . $connector . sprintf("[%s] <%s>(%s)</%s>%s ...", $childId, $cTypeColor, $childNode->type, $cTypeColor, $cConcreteStr);
-                } else {
-                     $lines = array_merge($lines, $this->renderTree($childNode, $graph, $prefix . $subPrefix, $path));
-                }
+                $lines = array_merge(
+                    $lines, 
+                    $this->renderTree(
+                        $childNode, 
+                        $graph, 
+                        $childrenPrefix . $connector, 
+                        $childrenPrefix . $childParams, 
+                        $path
+                    )
+                );
             }
         }
         
         return $lines;
     }
+    
+    // Correction on recursion logic to match standard "tree" command output style:
+    // renderTree is responsible for printing the node lines.
+    // Issue with previous logic:
+    // $lines[] = $prefix . $label; 
+    // And in loop: renderTree(child, $prefix . $subPrefix)
+    
+    // When called from root: prefix is empty. 
+    // root -> "Label"
+    // loop child A (not last): connector '├─ ', subPrefix '│  '
+    // recurse(A, '│  '). 
+    // A -> "│  Label" -> Wait, where depends the connector?
+    
+    // Ah, the connector belongs to the PARENT calling the child.
+    // The previous code had: $lines[] = $prefix . $connector . childLabel... 
+    // But now I am calling renderTree recursively which starts with $lines[] = $prefix . $label.
+    
+    // So the $prefix passed to renderTree MUST include the connector for the *root* of that subtree?
+    // No, usually you pass the prefix for *children* and handle the connector locally.
+    
+    // Method 2 (Cleaner recursion):
+    // renderTree(node, prefixForSelf, prefixForChildren)
+    // Root call: renderTree(root, "", "")
+    
+    // Let's try to stick closer to the logic that works.
+    // Refactoring to a private helper that knows about connectors?
+    
+    // Let's keep it simple:
+    // renderTree($node, $currentPrefix) 
+    // This function prints the node using $currentPrefix.
+    // PROBLEM: $currentPrefix includes the └─ or ├─ which is only for the first line.
+    
+    // Solution:
+    // renderNode($node, $prefixFirstLine, $prefixChildren, $path)
 }
