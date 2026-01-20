@@ -1,0 +1,25 @@
+{
+    "name": "pedhot-dev/nepotismfree-di-debugger",
+    "description": "CLI Debugger for NepotismFree-DI",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "symfony/console": "^7.0",
+        "pedhot-dev/nepotismfree-di": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "PedhotDev\\NepotismFree\\Debugger\\": "src/"
+        }
+    },
+    "bin": [
+        "bin/di"
+    ],
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}

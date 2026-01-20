@@ -1,0 +1,103 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// bin/di
+
+use PedhotDev\NepotismFree\Contract\IntrospectableContainerInterface;
+use PedhotDev\NepotismFree\Debugger\Command\GraphCommand;
+use PedhotDev\NepotismFree\Debugger\Command\TraceCommand;
+use PedhotDev\NepotismFree\Debugger\Command\WhyCommand;
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Console\Output\ConsoleOutput;
+
+// 1. Autoloading
+$autoloaders = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php', // Composer global
+];
+
+foreach ($autoloaders as $autoloader) {
+    if (file_exists($autoloader)) {
+        require $autoloader;
+        break;
+    }
+}
+
+// 2. Identify Bootstrap File
+// We peek into argv to find --bootstrap or -b BEFORE the command name parsing if possible,
+// or we just define it as a global option for the application.
+
+// Ideally, we want the container instance.
+$container = loadContainer();
+
+if ($container !== null && !$container instanceof IntrospectableContainerInterface) {
+    fwrite(STDERR, "Error: The bootstrapped container must implement IntrospectableContainerInterface.\n");
+    exit(1);
+}
+
+// 3. Application Setup
+$application = new Application('NepotismFree-DI Debugger', '0.1.0');
+$application->getDefinition()->addOption(
+    new \Symfony\Component\Console\Input\InputOption(
+        '--bootstrap', 
+        '-b', 
+        \Symfony\Component\Console\Input\InputOption::VALUE_REQUIRED, 
+        'Path to the container bootstrap file', 
+        'di-config.php'
+    )
+);
+
+// Register Commands
+// We will inject the container adapter later. For now, passing raw container or adapter.
+// We'll Create the Adapter here to keep commands clean.
+$adapter = new \PedhotDev\NepotismFree\Debugger\Adapter\IntrospectionAdapter($container);
+
+$application->add(new GraphCommand($adapter));
+$application->add(new WhyCommand($adapter));
+$application->add(new TraceCommand($adapter));
+
+$application->run();
+
+/**
+ * Helper to load the container
+ */
+function loadContainer(): mixed
+{
+    $input = new ArgvInput();
+    $bootstrapPath = $input->getParameterOption(['--bootstrap', '-b'], 'di-config.php');
+
+    if (!file_exists($bootstrapPath)) {
+        // Fallback or error? 
+        // For development of the TOOL itself, we might want to check if we are just listing commands.
+        // But the user wants "Debugger consumes introspection data only".
+        
+        // If we simply run "bin/di list", we shouldn't crash if no container.
+        // But our commands DEPEND on the container.
+        
+        // Let's check if we are just running help or list.
+        $firstArg = $input->getFirstArgument();
+        if ($firstArg === null || $firstArg === 'list' || $firstArg === 'help') {
+             // Return a dummy for "list" to work without crashing, OR just allow fail.
+             // The Project Goal requires "Debugger must work with ANY container instance passed to it".
+             // If we can't load it, we can't debug.
+             
+             // However, for `composer install` verification, we might want to allow running `bin/di list` without a config.
+             // Let's create a partial mock if missing FILE, ONLY if commmand is meta.
+             // Actually, strict is better for a dev tool.
+        }
+
+        if (!file_exists($bootstrapPath)) {
+            // Quietly fail for default path, so 'list' works cleanly.
+            // If user specified --bootstrap explicitly, they will get a runtime error later 
+            // or we could check here if it was default vs explicit, but for now silent is best for CLI UX.
+             // fwrite(STDERR, "Warning: Bootstrap file '$bootstrapPath' not found.\n");
+             return null;
+        }
+    }
+
+    $container = include $bootstrapPath;
+    return $container;
+}
