@@ -98,4 +98,56 @@ class ValidateCommandTest extends CommandTestCase
         $this->assertNotEmpty($data['structural_errors']);
         $this->assertEquals('dependency_cycle', $data['structural_errors'][0]['type']);
     }
+
+    public function testValidateFailureOnMissingDependency(): void
+    {
+        $registry = new \PedhotDev\NepotismFree\Core\Registry();
+        $registry->bind('A', 'stdClass');
+        // A depends on B via constructor, but B is not bound.
+        // We simulate this by manually creating the node in our mock setup if needed, 
+        // but here we just need the adapter to report a node with a dependency that isn't a node.
+        
+        $container = $this->createMockContainer(['A' => 'stdClass']);
+        // We need to make sure 'A' actually has 'B' as dependency in the graph.
+        // The real introspection adapter gets this from the container's graph.
+        // Since we are using the real Container in createMockContainer, 
+        // we can use a class that has a dependency.
+        
+        $container = $this->createMockContainer([
+            \PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class => \PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class
+            // ValidateTick is NOT bound.
+        ]);
+
+        $adapter = new IntrospectionAdapter($container);
+        $command = new ValidateCommand($adapter);
+        $tester = $this->createTester($command);
+
+        $exitCode = $tester->execute([]);
+
+        $this->assertEquals(1, $exitCode);
+        $this->assertStringContainsString('Structural Errors', $tester->getDisplay());
+        $this->assertStringContainsString('Missing dependency detected:', $tester->getDisplay());
+        $this->assertStringContainsString(\PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class . ' -> ' . \PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateTick::class, $tester->getDisplay());
+    }
+
+    public function testValidateJsonOutputWithMissingDependency(): void
+    {
+        $container = $this->createMockContainer([
+            \PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class => \PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class
+        ]);
+
+        $adapter = new IntrospectionAdapter($container);
+        $command = new ValidateCommand($adapter);
+        $tester = $this->createTester($command);
+
+        $exitCode = $tester->execute(['--format' => 'json']);
+
+        $this->assertEquals(1, $exitCode);
+        $data = json_decode($tester->getDisplay(), true);
+        
+        $this->assertEquals('invalid', $data['status']);
+        $this->assertEquals('missing_dependency', $data['structural_errors'][0]['type']);
+        $this->assertEquals(\PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateProcess::class, $data['structural_errors'][0]['from']);
+        $this->assertEquals(\PedhotDev\NepotismFree\Debugger\Tests\Command\ValidateTick::class, $data['structural_errors'][0]['dependency']);
+    }
 }

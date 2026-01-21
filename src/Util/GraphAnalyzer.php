@@ -126,4 +126,23 @@ class GraphAnalyzer
         }
         return $violations;
     }
+
+    /**
+     * @return array<int, array{from: string, missing: string}>
+     */
+    public static function findMissingDependencies(DebuggerGraph $graph): array
+    {
+        $missing = [];
+        foreach ($graph->getNodes() as $node) {
+            foreach ($node->dependencies as $depId) {
+                if (!$graph->getNode($depId)) {
+                    $missing[] = [
+                        'from' => $node->id,
+                        'missing' => $depId,
+                    ];
+                }
+            }
+        }
+        return $missing;
+    }
 }

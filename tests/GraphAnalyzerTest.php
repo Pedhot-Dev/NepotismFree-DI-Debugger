@@ -85,4 +85,16 @@ class GraphAnalyzerTest extends TestCase
         $this->assertEquals('Process', $violations[0]['parent']);
         $this->assertEquals('Tick', $violations[0]['child']);
     }
+
+    public function testFindMissingDependencies(): void
+    {
+        $nodeA = new DebuggerNode('A', 'singleton', true, 'ClassA', dependencies: ['B']);
+        $this->graph->addNode($nodeA);
+
+        $missing = GraphAnalyzer::findMissingDependencies($this->graph);
+
+        $this->assertCount(1, $missing);
+        $this->assertEquals('A', $missing[0]['from']);
+        $this->assertEquals('B', $missing[0]['missing']);
+    }
 }

@@ -23,6 +23,13 @@ class OrphansCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $graph = $this->adapter->getGraph();
+        $missing = GraphAnalyzer::findMissingDependencies($graph);
+
+        if (!empty($missing)) {
+            $output->writeln("<error>Cannot determine orphan services: graph contains missing dependencies.</error>");
+            return Command::FAILURE;
+        }
+
         $orphans = GraphAnalyzer::findOrphans($graph);
 
         if (empty($orphans)) {

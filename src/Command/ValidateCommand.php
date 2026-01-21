@@ -44,24 +44,25 @@ class ValidateCommand extends Command
         // Collect Issues
         $cycles = GraphAnalyzer::findCycles($graph);
         $scopeViolations = GraphAnalyzer::validateScopes($graph);
+        $missingDependencies = GraphAnalyzer::findMissingDependencies($graph);
         $orphans = GraphAnalyzer::findOrphans($graph);
 
-        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations) || !empty($missingDependencies);
         $hasHygieneIssues = !empty($orphans);
 
         if ($format === 'json') {
-            return $this->renderJson($output, $cycles, $scopeViolations, $orphans);
+            return $this->renderJson($output, $cycles, $scopeViolations, $missingDependencies, $orphans);
         }
 
-        return $this->renderText($output, $cycles, $scopeViolations, $orphans);
+        return $this->renderText($output, $cycles, $scopeViolations, $missingDependencies, $orphans);
     }
 
-    private function renderText(OutputInterface $output, array $cycles, array $scopeViolations, array $orphans): int
+    private function renderText(OutputInterface $output, array $cycles, array $scopeViolations, array $missingDependencies, array $orphans): int
     {
         $output->writeln("Validating dependency graph...");
         $output->writeln("");
 
-        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations) || !empty($missingDependencies);
         $hasHygieneIssues = !empty($orphans);
 
         // 1. Structural Errors (Fatal)
@@ -83,6 +84,12 @@ class ValidateCommand extends Command
                     $v['child']
                 ));
             }
+
+            foreach ($missingDependencies as $m) {
+                $output->writeln(" - <error>Missing dependency detected:</error>");
+                $output->writeln(sprintf("   <info>%s</info> -> <error>%s</error>", $m['from'], $m['missing']));
+            }
+
             $output->writeln("");
         }
 
@@ -116,14 +123,14 @@ class ValidateCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function renderJson(OutputInterface $output, array $cycles, array $scopeViolations, array $orphans): int
+    private function renderJson(OutputInterface $output, array $cycles, array $scopeViolations, array $missingDependencies, array $orphans): int
     {
-        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations) || !empty($missingDependencies);
 
         $data = [
             'status' => $hasStructuralErrors ? 'invalid' : 'valid',
             'summary' => [
-                'structural_errors' => count($cycles) + count($scopeViolations),
+                'structural_errors' => count($cycles) + count($scopeViolations) + count($missingDependencies),
                 'hygiene_issues' => count($orphans),
             ],
             'structural_errors' => [],
@@ -148,6 +155,14 @@ class ValidateCommand extends Command
                     'service' => $v['child'],
                     'scope' => strtoupper($v['childScope']),
                 ],
+            ];
+        }
+
+        foreach ($missingDependencies as $m) {
+            $data['structural_errors'][] = [
+                'type' => 'missing_dependency',
+                'from' => $m['from'],
+                'dependency' => $m['missing'],
             ];
         }
 
