@@ -45,3 +45,53 @@ jobs:
         
         echo "Testing Graph generation..."
         php bin/di di:graph -b tests/fixtures/bootstrap.php
+
+    # 5. Run Unit & Contract Tests
+    - name: Run Unit & Contract Tests
+      run: vendor/bin/phpunit
+
+  release-assets:
+    name: Upload Release Assets
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [smoke-test]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-interaction
+
+      - name: Generate Validation JSON
+        # We allow failure here if the graph is invalid, but we still want the artifact?
+        # The prompt says: "The CI job MUST: Still fail on non-zero exit code."
+        # If it fails, the next steps might not run unless we use continue-on-error or similar.
+        # But we MUST fail the job. 
+        # Actually, if the graph is invalid, the release asset should still be uploaded but the job fails?
+        # Usually, if a job fails, we don't upload. But the user asked for both.
+        # "Generate validation.json ... upload as asset ... Job MUST still fail on non-zero exit code."
+        run: |
+          php bin/di di:validate --format=json -b tests/fixtures/bootstrap.php > validation.json || EX=$?; echo "Exit code: $EX"; (exit $EX)
+        continue-on-error: true
+        id: validate
+
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: validation.json
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enforce Validation Success
+        if: steps.validate.outcome == 'failure'
+        run: |
+          echo "Validation failed, failing the job as required."
+          exit 1
