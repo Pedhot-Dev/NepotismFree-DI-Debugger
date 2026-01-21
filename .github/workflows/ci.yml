@@ -64,18 +64,31 @@ jobs:
       - name: Install Composer Dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
 
-      - name: Generate Validation JSON
-        id: validate
+      # ---------- VALID GRAPH ----------
+      - name: Generate VALID dependency report
+        run: |
+          php bin/di di:validate \
+            --format=json \
+            -b tests/fixtures/bootstrap.php \
+            > validation-valid.json
+
+      # ---------- INVALID GRAPH (EXPECTED FAILURE) ----------
+      - name: Generate INVALID dependency report (diagnostic)
         run: |
           set +e
-          php bin/di di:validate --format=json -b tests/fixtures/bootstrap.php > validation.json
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          php bin/di di:validate \
+            --format=json \
+            -b tests/fixtures/diagnostic_bootstrap.php \
+            > validation-invalid.json
+          echo "Expected exit code (non-zero) ignored for diagnostic graph."
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          files: validation.json
+          files: |
+            validation-valid.json
+            validation-invalid.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
