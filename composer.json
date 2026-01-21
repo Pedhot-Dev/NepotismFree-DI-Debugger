@@ -13,6 +13,11 @@
             "PedhotDev\\NepotismFree\\Debugger\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "PedhotDev\\NepotismFree\\Debugger\\Tests\\": "tests/"
+        }
+    },
     "bin": [
         "bin/di"
     ],
@@ -26,5 +31,8 @@
         }
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    }
 }
