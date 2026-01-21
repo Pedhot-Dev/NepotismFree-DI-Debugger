@@ -26,17 +26,21 @@ class IntrospectionAdapter
         $debuggerGraph = new DebuggerGraph();
 
         // 1. First pass: Create all nodes
+        $registry = $this->extractRegistry();
+
         foreach ($internalNodes as $id => $node) {
+            $scope = $registry ? $registry->getScope($id)->value : null;
+
             $debuggerNode = new DebuggerNode(
                 id: $node->id,
                 type: $node->type,
                 isResolved: $node->isResolved,
                 concrete: $node->concrete,
+                scope: $scope,
                 dependencies: $node->dependencies
             );
             $debuggerGraph->addNode($debuggerNode);
         }
-
         // 2. Second pass: Calculate parents (requiredBy)
         foreach ($internalNodes as $parentId => $node) {
             foreach ($node->dependencies as $childId) {
@@ -50,6 +54,18 @@ class IntrospectionAdapter
         }
 
         return $debuggerGraph;
+    }
+
+    private function extractRegistry(): ?\PedhotDev\NepotismFree\Core\Registry
+    {
+        if ($this->container instanceof \PedhotDev\NepotismFree\Core\Container) {
+            $reflection = new \ReflectionClass($this->container);
+            $property = $reflection->getProperty('registry');
+            $property->setAccessible(true);
+            return $property->getValue($this->container);
+        }
+
+        return null;
     }
 
     public function getContainer(): IntrospectableContainerInterface

@@ -9,6 +9,10 @@ use PedhotDev\NepotismFree\Contract\IntrospectableContainerInterface;
 use PedhotDev\NepotismFree\Debugger\Command\GraphCommand;
 use PedhotDev\NepotismFree\Debugger\Command\TraceCommand;
 use PedhotDev\NepotismFree\Debugger\Command\WhyCommand;
+use PedhotDev\NepotismFree\Debugger\Command\RootsCommand;
+use PedhotDev\NepotismFree\Debugger\Command\OrphansCommand;
+use PedhotDev\NepotismFree\Debugger\Command\ScopeCommand;
+use PedhotDev\NepotismFree\Debugger\Command\ValidateCommand;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
@@ -58,6 +62,10 @@ $adapter = new \PedhotDev\NepotismFree\Debugger\Adapter\IntrospectionAdapter($co
 $application->add(new GraphCommand($adapter));
 $application->add(new WhyCommand($adapter));
 $application->add(new TraceCommand($adapter));
+$application->add(new RootsCommand($adapter));
+$application->add(new OrphansCommand($adapter));
+$application->add(new ScopeCommand($adapter));
+$application->add(new ValidateCommand($adapter));
 
 $application->run();
 

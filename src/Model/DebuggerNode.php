@@ -19,6 +19,7 @@ class DebuggerNode
         public readonly string $type, // singleton, factory, etc
         public readonly bool $isResolved,
         public readonly ?string $concrete,
+        public readonly ?string $scope = null,
         public array $dependencies = [],
         public array $requiredBy = [],
     ) {}

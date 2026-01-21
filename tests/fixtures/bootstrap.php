@@ -23,7 +23,7 @@ $registry->setSingleton(ServiceC::class, true);
 $registry->setSingleton(RootService::class, true);
 
 // Access Policy
-$policy = new ModuleAccessPolicy([]); // Allow everything for test
+$policy = new ModuleAccessPolicy($registry); // Allow everything for test
 
 // Container
 // Container

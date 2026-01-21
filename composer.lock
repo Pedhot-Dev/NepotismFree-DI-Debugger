@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "51d12aa2cd65bd78bb963f5bab59dd1c",
+    "content-hash": "8ad0a89d95b42fa0b866526ce3506880",
     "packages": [
         {
             "name": "pedhot-dev/nepotismfree-di",
-            "version": "v1.0.2",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Pedhot-Dev/NepotismFree-DI.git",
-                "reference": "949dd14d0ac679e3cf6ce2501d2c4ab89440f79c"
+                "reference": "bb98cf26a8d72b03bb7891002429041a46333478"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Pedhot-Dev/NepotismFree-DI/zipball/949dd14d0ac679e3cf6ce2501d2c4ab89440f79c",
-                "reference": "949dd14d0ac679e3cf6ce2501d2c4ab89440f79c",
+                "url": "https://api.github.com/repos/Pedhot-Dev/NepotismFree-DI/zipball/bb98cf26a8d72b03bb7891002429041a46333478",
+                "reference": "bb98cf26a8d72b03bb7891002429041a46333478",
                 "shasum": ""
             },
             "require": {
@@ -53,7 +53,7 @@
                 "issues": "https://github.com/Pedhot-Dev/nepotismfree-di/issues",
                 "source": "https://github.com/Pedhot-Dev/nepotismfree-di"
             },
-            "time": "2026-01-20T03:46:52+00:00"
+            "time": "2026-01-21T13:09:55+00:00"
         },
         {
             "name": "psr/container",
