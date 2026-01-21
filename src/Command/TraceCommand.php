@@ -33,12 +33,19 @@ class TraceCommand extends Command
         $node = $graph->getNode($serviceId);
 
         if (!$node) {
-            $output->writeln("<error>Service '$serviceId' not found in the graph.</error>");
+            \PedhotDev\NepotismFree\Debugger\Util\SuggestionHelper::suggest($serviceId, array_keys($graph->getNodes()), $output);
             return Command::FAILURE;
         }
 
         $output->writeln("Resolution Trace for: <info>$serviceId</info>");
+        $output->writeln("<comment>(Direction: dependencies required by this service)</comment>");
+        $output->writeln("");
+
         $this->printTrace($node, $output, $graph, 0);
+
+        if (empty($node->dependencies)) {
+            $output->writeln("<comment>(no dependencies)</comment>");
+        }
 
         return Command::SUCCESS;
     }

@@ -33,9 +33,13 @@ class WhyCommand extends Command
         $node = $graph->getNode($serviceId);
 
         if (!$node) {
-            $output->writeln("<error>Service '$serviceId' not found in the graph.</error>");
+            \PedhotDev\NepotismFree\Debugger\Util\SuggestionHelper::suggest($serviceId, array_keys($graph->getNodes()), $output);
             return Command::FAILURE;
         }
+
+        $output->writeln("Explaining why service is instantiated: <info>$serviceId</info>");
+        $output->writeln("<comment>(Direction: services that depend on this service)</comment>");
+        $output->writeln("");
 
         $output->writeln(sprintf("Service: <info>%s</info>", $node->id));
         $output->writeln(sprintf("Type: <comment>%s</comment>", $node->type));
