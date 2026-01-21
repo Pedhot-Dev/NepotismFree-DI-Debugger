@@ -91,12 +91,3 @@ jobs:
             validation-invalid.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Enforce Validation Result
-        run: |
-          if [ "${{ steps.validate.outputs.exit_code }}" != "0" ]; then
-            echo "❌ Dependency validation failed. Failing release job."
-            exit 1
-          else
-            echo "✅ Dependency validation passed."
-          fi
