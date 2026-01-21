@@ -20,33 +20,63 @@ class ValidateCommand extends Command
         parent::__construct();
     }
 
+    protected function configure(): void
+    {
+        $this->addOption(
+            'format',
+            null,
+            \Symfony\Component\Console\Input\InputOption::VALUE_REQUIRED,
+            'Output format (text, json)',
+            'text'
+        );
+    }
+
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $graph = $this->adapter->getGraph();
-        $isValid = true;
+        $format = $input->getOption('format');
+        if (!in_array($format, ['text', 'json'], true)) {
+            $output->writeln(sprintf('<error>Invalid format "%s". Allowed: text, json</error>', $format));
+            return Command::FAILURE;
+        }
 
+        $graph = $this->adapter->getGraph();
+        
+        // Collect Issues
+        $cycles = GraphAnalyzer::findCycles($graph);
+        $scopeViolations = GraphAnalyzer::validateScopes($graph);
+        $orphans = GraphAnalyzer::findOrphans($graph);
+
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+        $hasHygieneIssues = !empty($orphans);
+
+        if ($format === 'json') {
+            return $this->renderJson($output, $cycles, $scopeViolations, $orphans);
+        }
+
+        return $this->renderText($output, $cycles, $scopeViolations, $orphans);
+    }
+
+    private function renderText(OutputInterface $output, array $cycles, array $scopeViolations, array $orphans): int
+    {
         $output->writeln("Validating dependency graph...");
         $output->writeln("");
 
-        // 1. Cycles
-        $cycles = GraphAnalyzer::findCycles($graph);
-        if (!empty($cycles)) {
-            $isValid = false;
-            $output->writeln("❌ <error>Dependency cycle(s) detected:</error>");
-            foreach ($cycles as $startNode => $path) {
-                $output->writeln(" - " . implode(' -> ', $path));
-            }
-            $output->writeln("");
-        }
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+        $hasHygieneIssues = !empty($orphans);
 
-        // 2. Scope Mismatches
-        $violations = GraphAnalyzer::validateScopes($graph);
-        if (!empty($violations)) {
-            $isValid = false;
-            $output->writeln("❌ <error>Scope mismatch(es) detected:</error>");
-            foreach ($violations as $v) {
+        // 1. Structural Errors (Fatal)
+        if ($hasStructuralErrors) {
+            $output->writeln("❌ <error>Structural Errors</error>");
+            $output->writeln("<error>-----------------</error>");
+            
+            foreach ($cycles as $path) {
+                $output->writeln(" - <error>Dependency cycle detected:</error>");
+                $output->writeln("   " . implode(' -> ', $path));
+            }
+
+            foreach ($scopeViolations as $v) {
                 $output->writeln(sprintf(
-                    " - <info>%s</info> scoped service <comment>%s</comment> depends on <info>%s</info> service <comment>%s</comment>",
+                    " - <error>Scope mismatch detected:</error>\n   <info>%s</info> service <comment>%s</comment> depends on <info>%s</info> service <comment>%s</comment>",
                     strtoupper($v['parentScope']),
                     $v['parent'],
                     strtoupper($v['childScope']),
@@ -56,24 +86,81 @@ class ValidateCommand extends Command
             $output->writeln("");
         }
 
-        // 3. Orphans
-        $orphans = GraphAnalyzer::findOrphans($graph);
-        if (!empty($orphans)) {
-            // Note: Orphans aren't necessarily "invalid" in a hard sense, 
-            // but they are a maintenance smell. We report them.
-            $output->writeln("⚠️  <comment>Orphan service(s) detected (unreachable from roots):</comment>");
-            foreach ($orphans as $orphan) {
-                $output->writeln(" - <info>{$orphan->id}</info>");
+        // 2. Hygiene Issues (Non-fatal)
+        if ($hasHygieneIssues) {
+            $output->writeln("⚠️  <comment>Hygiene Issues</comment>");
+            $output->writeln("<comment>--------------</comment>");
+            
+            if (!empty($orphans)) {
+                $output->writeln(" - <comment>Orphan service(s) detected (unreachable from roots):</comment>");
+                foreach ($orphans as $orphan) {
+                    $output->writeln("   <info>{$orphan->id}</info>");
+                }
             }
             $output->writeln("");
         }
 
-        if ($isValid) {
-            $output->writeln("✅ <info>Dependency graph is structurally sound.</info>");
+        // 3. Final Verdict
+        if ($hasStructuralErrors) {
+            $output->writeln("❌ <error>Invalid dependency graph detected.</error>");
+            $output->writeln("Please fix the structural errors above.");
+            return Command::FAILURE;
+        }
+
+        if ($hasHygieneIssues) {
+            $output->writeln("⚠️  <comment>Dependency graph is valid, but hygiene issues were found.</comment>");
             return Command::SUCCESS;
         }
 
-        $output->writeln("<error>Invalid dependency graph detected. Please fix the issues above.</error>");
-        return Command::FAILURE;
+        $output->writeln("✅ <info>Dependency graph is structurally sound.</info>");
+        return Command::SUCCESS;
+    }
+
+    private function renderJson(OutputInterface $output, array $cycles, array $scopeViolations, array $orphans): int
+    {
+        $hasStructuralErrors = !empty($cycles) || !empty($scopeViolations);
+
+        $data = [
+            'status' => $hasStructuralErrors ? 'invalid' : 'valid',
+            'summary' => [
+                'structural_errors' => count($cycles) + count($scopeViolations),
+                'hygiene_issues' => count($orphans),
+            ],
+            'structural_errors' => [],
+            'hygiene_issues' => [],
+        ];
+
+        foreach ($cycles as $path) {
+            $data['structural_errors'][] = [
+                'type' => 'dependency_cycle',
+                'cycle' => $path,
+            ];
+        }
+
+        foreach ($scopeViolations as $v) {
+            $data['structural_errors'][] = [
+                'type' => 'scope_mismatch',
+                'from' => [
+                    'service' => $v['parent'],
+                    'scope' => strtoupper($v['parentScope']),
+                ],
+                'to' => [
+                    'service' => $v['child'],
+                    'scope' => strtoupper($v['childScope']),
+                ],
+            ];
+        }
+
+        foreach ($orphans as $orphan) {
+            $data['hygiene_issues'][] = [
+                'type' => 'orphan_service',
+                'service' => $orphan->id,
+                'reason' => 'unreachable_from_roots',
+            ];
+        }
+
+        $output->write(json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return $hasStructuralErrors ? Command::FAILURE : Command::SUCCESS;
     }
 }

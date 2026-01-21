@@ -59,10 +59,11 @@ class IntrospectionAdapter
     private function extractRegistry(): ?\PedhotDev\NepotismFree\Core\Registry
     {
         if ($this->container instanceof \PedhotDev\NepotismFree\Core\Container) {
-            $reflection = new \ReflectionClass($this->container);
-            $property = $reflection->getProperty('registry');
-            $property->setAccessible(true);
-            return $property->getValue($this->container);
+            $reflection = new \ReflectionClass(\PedhotDev\NepotismFree\Core\Container::class);
+            if ($reflection->hasProperty('registry')) {
+                $property = $reflection->getProperty('registry');
+                return $property->getValue($this->container);
+            }
         }
 
         return null;
