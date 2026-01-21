@@ -68,7 +68,7 @@ jobs:
         id: validate
         run: |
           set +e
-          php bin/di di:validate --format=json -b tests/fixtures/diagnostic_bootstrap.php > validation.json
+          php bin/di di:validate --format=json -b tests/fixtures/bootstrap.php > validation.json
           echo "exit_code=$?" >> $GITHUB_OUTPUT
 
       - name: Upload Release Asset
